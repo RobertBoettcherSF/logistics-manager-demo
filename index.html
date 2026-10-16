@@ -684,7 +684,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
 #map{flex:1;min-height:150px;background:#dde}
 #sheet{max-height:58%;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -3px 10px rgba(0,0,0,.15)}
 h3{margin:2px 0 8px;font-size:16px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px}
 .svc{border:2px solid #dde;background:#f7f9f8;border-radius:10px;padding:6px 2px;font-size:12px;text-align:center}
 .svc span{display:block;font-size:20px}.svc.on{border-color:#0a7a3e;background:#e8f5ec;font-weight:600}
 .hint{background:#fffbe6;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:13px}
@@ -797,12 +797,10 @@ input,select,textarea{width:100%;font-size:16px;padding:7px;border:1px solid #bc
 var CENTER=[6.3350,5.6037];// Benin City (Ring Road)
 var SERVICES={
  ride:{label:'Ride',icon:'🚗',base:600,km:250,min:1500,veh:['car'],cap:'up to 4 people'},
- keke:{label:'Keke',icon:'🛺',base:300,km:120,min:500,veh:['keke'],cap:'up to 3 people'},
- okada:{label:'Okada',icon:'🏍️',base:200,km:100,min:400,veh:['okada'],cap:'1 person'},
  bus:{label:'Group bus',icon:'🚌',base:300,km:80,min:400,veh:['bus'],cap:'per seat, up to 18'},
- courier:{label:'Courier',icon:'📦',base:500,km:120,min:700,veh:['okada','keke','car'],cap:'parcel delivery'},
+ dispatch:{label:'Dispatch rider',icon:'🏍️',base:400,km:110,min:600,veh:['bike'],cap:'motorbike parcel delivery'},
  truck:{label:'Truck',icon:'🚚',base:5000,km:800,min:15000,veh:['truck'],cap:'goods / moving'}};
-var VEH={car:'🚗 Car',keke:'🛺 Keke',okada:'🏍️ Okada',bus:'🚌 Bus',truck:'🚚 Truck'};
+var VEH={car:'🚗 Car',bike:'🏍️ Motorbike',bus:'🚌 Bus',truck:'🚚 Truck'};
 var SIZE={small:1,medium:1.4,large:2};
 var STEPS=['requested','offers','accepted','arriving','moving','done'];
 var R=SDReport;
@@ -811,8 +809,8 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function naira(n){return '₦'+Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')}
 function r50(n){return Math.round(n/50)*50}
 function km(a,b){var R6=6371,dl=(b.lat-a.lat)*Math.PI/180,dg=(b.lng-a.lng)*Math.PI/180,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dg/2)*Math.sin(dg/2);return 2*R6*Math.asin(Math.sqrt(x))*1.3}// x1.3 road factor
-function fare(svc,d,f){var s=SERVICES[svc],v=Math.max(s.min,s.base+s.km*d);if(svc==='bus')v=Math.max(s.min,s.base+s.km*d)*(f.seats||1);if(svc==='courier')v=v*(SIZE[f.size]||1);return r50(v)}
-function statusText(r){var mv=(r.service==='courier'||r.service==='truck')?'In delivery':'On trip';return {requested:'Looking for drivers…',offers:'Drivers are offering',accepted:'Driver accepted',arriving:'Driver arriving',moving:mv,done:'Done – pay cash',cancelled:'Cancelled'}[r.status]||r.status}
+function fare(svc,d,f){var s=SERVICES[svc],v=Math.max(s.min,s.base+s.km*d);if(svc==='bus')v=Math.max(s.min,s.base+s.km*d)*(f.seats||1);if(svc==='dispatch')v=v*(SIZE[f.size]||1);return r50(v)}
+function statusText(r){var mv=(r.service==='dispatch'||r.service==='truck')?'In delivery':'On trip';return {requested:'Looking for drivers…',offers:'Drivers are offering',accepted:'Driver accepted',arriving:'Driver arriving',moving:mv,done:'Done – pay cash',cancelled:'Cancelled'}[r.status]||r.status}
 
 // ---------- identity ----------
 var tab=sessionStorage.getItem('sd_tab');if(!tab){tab='u'+Math.random().toString(36).slice(2,8);sessionStorage.setItem('sd_tab',tab)}
@@ -840,7 +838,7 @@ map.on('click',function(e){if(ui.role!=='customer'||ui.myReq)return;var pt={lat:
 
 // ---------- simulated drivers (demo) ----------
 var NAMES=['Osaro','Efosa','Ehi','Nosa','Ivie','Osas','Uyi','Eki','Ada','Femi','Tunde','Bisi'];
-var sims=[];['car','car','keke','keke','okada','okada','bus','bus','truck','car','okada','keke'].forEach(function(v,i){sims.push({id:'sim'+i,name:NAMES[i],veh:v,lat:CENTER[0]+(Math.random()-.5)*.05,lng:CENTER[1]+(Math.random()-.5)*.06,busy:null,tLat:null,tLng:null})});
+var sims=[];['car','car','bike','bike','bike','bus','bus','truck','car','bike','car','truck'].forEach(function(v,i){sims.push({id:'sim'+i,name:NAMES[i],veh:v,lat:CENTER[0]+(Math.random()-.5)*.05,lng:CENTER[1]+(Math.random()-.5)*.06,busy:null,tLat:null,tLng:null})});
 function drawSims(){simLayer.clearLayers();if(!ui.sim)return;sims.forEach(function(s){L.marker([s.lat,s.lng],{icon:icon(VEH[s.veh].split(' ')[0],'sim'),interactive:false}).addTo(simLayer)})}
 setInterval(function(){if(!ui.sim)return;sims.forEach(function(s){if(s.tLat!=null){s.lat+=(s.tLat-s.lat)*.3;s.lng+=(s.tLng-s.lng)*.3}else{s.lat+=(Math.random()-.5)*.002;s.lng+=(Math.random()-.5)*.002}});drawSims()},2000);
 function simReact(r){if(!ui.sim||r.customer!==tab||r.status!=='requested'||r._simDone)return;r._simDone=1;
@@ -865,7 +863,7 @@ function onEvent(ev,remote){apply(ev);R.log('ev:'+ev.t+(remote?' (in)':' (out)')
 function steps(r){var i=STEPS.indexOf(r.status);return '<div class="st">'+STEPS.map(function(s,k){return '<div class="'+(k<=i?'on':'')+'"></div>'}).join('')+'</div>'}
 function vbadge(v){return v?'<span class="badge">✔ verified (demo)</span>':''}
 function reqLine(r){var s=SERVICES[r.service],x=s.icon+' <b>'+s.label+'</b> · '+r.dist.toFixed(1)+' km';
- if(r.service==='bus')x+=' · '+r.f.seats+' seats';if(r.service==='courier')x+=' · '+esc(r.f.size)+' parcel → '+esc(r.f.rphone);if(r.service==='truck')x+=' · '+esc(r.f.load);return x}
+ if(r.service==='bus')x+=' · '+r.f.seats+' seats';if(r.service==='dispatch')x+=' · '+esc(r.f.size)+' parcel → '+esc(r.f.rphone);if(r.service==='truck')x+=' · '+esc(r.f.load);return x}
 function myJob(){for(var k in reqs){var r=reqs[k];if(r.driver&&r.driver.driver===tab&&r.status!=='done'&&r.status!=='cancelled')return r}return null}
 function render(){var h='',el=$('sheet');$('roleC').className=ui.role==='customer'?'on':'';$('roleD').className=ui.role==='driver'?'on':'';
  $('verifyBtn').textContent=prof.verified?'✔ Verified':'Verify';$('verifyBtn').className='chip'+(prof.verified?' ok':'');
@@ -885,14 +883,14 @@ function renderCustomer(){var r=ui.myReq&&reqs[ui.myReq];
  var po=function(id,lab,cur){return '<div><label>'+lab+'</label><select id="'+id+'"><option value="">Choose a landmark…</option>'+PLACES.map(function(p,i){return '<option value="'+i+'"'+(cur&&cur.lat===p[1]&&cur.lng===p[2]?' selected':'')+'>'+esc(p[0])+'</option>'}).join('')+'</select></div>'};
  h+='<div class="row">'+po('pickSel','Pickup',ui.pick)+po('destSel','Destination',ui.dest)+'</div>';
  var f=ui.f;if(ui.svc==='bus')h+='<label>Seats</label><input type="number" min="1" max="18" id="seats" value="'+f.seats+'">';
- if(ui.svc==='courier')h+='<div class="row"><div><label>Parcel size</label><select id="size">'+['small','medium','large'].map(function(s){return '<option'+(f.size===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div><div><label>Recipient phone</label><input id="rphone" type="tel" placeholder="080…" value="'+esc(f.rphone||'')+'"></div></div>';
+ if(ui.svc==='dispatch')h+='<div class="row"><div><label>Parcel size</label><select id="size">'+['small','medium','large'].map(function(s){return '<option'+(f.size===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div><div><label>Recipient phone</label><input id="rphone" type="tel" placeholder="080…" value="'+esc(f.rphone||'')+'"></div></div>';
  if(ui.svc==='truck')h+='<label>What are you moving?</label><input id="load" placeholder="e.g. 20 bags of cement" value="'+esc(f.load||'')+'">';
  if(ui.pick&&ui.dest){var sug=fare(ui.svc,km(ui.pick,ui.dest),f);if(!ui.offer)ui.offer=sug;
   h+='<div class="row"><div><label>Suggested fare</label><div class="price" id="sugg">'+naira(sug)+'</div></div><div><label>Your offer (₦, cash)</label><input type="number" id="offer" step="50" value="'+ui.offer+'"></div></div>';
   h+='<button class="btn" id="reqBtn" data-act="request">Request '+SERVICES[ui.svc].label+'</button>'}
  h+='<div class="muted" style="margin-top:6px">'+SERVICES[ui.svc].cap+' · Cash only'+(ui.sim?' · Demo drivers on map':'')+'</div>';return h}
-function renderDriver(){if(!ui.online){ui.screen='d-setup';return '<h3>Drive with Swift Drive</h3><label>Your name</label><input id="dname" value="'+esc(ui.dname||prof.name||'')+'" placeholder="Name"><label>Vehicle</label><select id="veh">'+Object.keys(VEH).map(function(k){return '<option value="'+k+'"'+(ui.veh===k?' selected':'')+'>'+VEH[k]+'</option>'}).join('')+'</select><button class="btn" id="goOnline" data-act="online">Go online</button><p class="muted">Courier jobs go to Okada, Keke and Car drivers.</p>'}
- var j=myJob();if(j){ui.screen='d-'+j.status;var next={accepted:['arriving','I\'m on my way'],arriving:['moving',(j.service==='courier'||j.service==='truck')?'Picked up – start delivery':'Passenger in – start trip'],moving:['done','Complete – cash received']}[j.status];
+function renderDriver(){if(!ui.online){ui.screen='d-setup';return '<h3>Drive with Swift Drive</h3><label>Your name</label><input id="dname" value="'+esc(ui.dname||prof.name||'')+'" placeholder="Name"><label>Vehicle</label><select id="veh">'+Object.keys(VEH).map(function(k){return '<option value="'+k+'"'+(ui.veh===k?' selected':'')+'>'+VEH[k]+'</option>'}).join('')+'</select><button class="btn" id="goOnline" data-act="online">Go online</button><p class="muted">Dispatch rider jobs (parcels) go to Motorbike drivers.</p>'}
+ var j=myJob();if(j){ui.screen='d-'+j.status;var next={accepted:['arriving','I\'m on my way'],arriving:['moving',(j.service==='dispatch'||j.service==='truck')?'Picked up – start delivery':'Passenger in – start trip'],moving:['done','Complete – cash received']}[j.status];
   return '<h3>'+reqLine(j)+'</h3>'+steps(j)+'<div class="hint" id="dstatus">'+statusText(j)+'</div><div class="card">Fare: <span class="price">'+naira(j.price)+'</span> cash</div>'+(next?'<button class="btn" id="nextBtn" data-act="next" data-s="'+next[0]+'">'+next[1]+'</button>':'')}
  ui.screen='d-list';var h='<h3>'+VEH[ui.veh]+' · online <button class="btn sec sm" data-act="offline">Go offline</button></h3>',n=0;
  Object.keys(reqs).forEach(function(k){var r=reqs[k];if((r.status!=='requested'&&r.status!=='offers')||ui.declined[k]||SERVICES[r.service].veh.indexOf(ui.veh)<0)return;n++;
@@ -910,7 +908,7 @@ var A={
  svc:function(b){readForm();ui.svc=b.getAttribute('data-k');ui.offer=null},
  request:function(){readForm();var d=km(ui.pick,ui.dest),sug=fare(ui.svc,d,ui.f);
   if(ui.offer<sug*.7){alert('Offer too low. Minimum is '+naira(r50(sug*.7)));return}
-  if(ui.svc==='courier'&&!/^\+?\d{7,15}$/.test((ui.f.rphone||'').replace(/\s/g,''))){alert('Please enter the recipient phone number');return}
+  if(ui.svc==='dispatch'&&!/^\+?\d{7,15}$/.test((ui.f.rphone||'').replace(/\s/g,''))){alert('Please enter the recipient phone number');return}
   if(ui.svc==='truck'&&!(ui.f.load||'').trim()){alert('Please describe the load');return}
   SDSync.send({t:'req',r:{id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),customer:tab,cverified:!!prof.verified,service:ui.svc,pick:ui.pick,dest:ui.dest,dist:d,sugg:sug,price:ui.offer,f:JSON.parse(JSON.stringify(ui.f)),status:'requested',offers:[],driver:null,ts:Date.now()}})},
  acceptOffer:function(b){var r=reqs[ui.myReq];SDSync.send({t:'accept',rid:r.id,o:r.offers[+b.getAttribute('data-i')]})},
